@@ -30,9 +30,10 @@ import (
 type GitHubCommand struct {
 	cmd.AbstractCommand
 
-	host  string
-	owner string
-	name  string
+	host       string
+	owner      string
+	name       string
+	preRelease bool
 }
 
 type release struct {
@@ -57,6 +58,7 @@ func NewGitHubCommand() *GitHubCommand {
 	cmd.Flags.StringVar(&cmd.host, "host", "github.com", "GitHub instance hostname")
 	cmd.Flags.StringVar(&cmd.owner, "owner", "", "owner of the repository")
 	cmd.Flags.StringVar(&cmd.name, "name", "", "name of the repository")
+	cmd.Flags.BoolVar(&cmd.preRelease, "prerelease", false, "include pre-releases")
 
 	return cmd
 }
@@ -69,10 +71,17 @@ func (github *GitHubCommand) Run() error {
 	}
 
 	for _, release := range releases {
-		fmt.Println("name =", release.Name, "tag =", release.Tag, "pre-release =", release.PreRelease)
+		if github.preRelease || !release.PreRelease {
+			handleRelease(release)
+			break
+		}
 	}
 
 	return nil
+}
+
+func handleRelease(release release) {
+	fmt.Println("name =", release.Name, "tag =", release.Tag, "pre-release =", release.PreRelease)
 }
 
 func buildUrl(github *GitHubCommand) string {
