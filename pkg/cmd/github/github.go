@@ -17,8 +17,12 @@ limitations under the License.
 package github
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
 
 	"github.com/syphr42/bindo/pkg/cmd"
 )
@@ -29,6 +33,12 @@ type GitHubCommand struct {
 	host  string
 	owner string
 	name  string
+}
+
+type release struct {
+	Name       string `json:"name"`
+	Tag        string `json:"tag_name"`
+	PreRelease bool   `json:"prerelease"`
 }
 
 func NewGitHubCommand() *GitHubCommand {
@@ -52,6 +62,59 @@ func NewGitHubCommand() *GitHubCommand {
 }
 
 func (github *GitHubCommand) Run() error {
-	fmt.Println("host = ", github.host, "; owner = ", github.owner, "; name = ", github.name)
+	releases, err := getReleases(github)
+
+	if err != nil {
+		return err
+	}
+
+	for _, release := range releases {
+		fmt.Println("name =", release.Name, "tag =", release.Tag, "pre-release =", release.PreRelease)
+	}
+
 	return nil
+}
+
+func buildUrl(github *GitHubCommand) string {
+	return "https://api." + github.host + "/repos/" + github.owner + "/" + github.name + "/releases"
+}
+
+func getReleases(github *GitHubCommand) ([]release, error) {
+	client := http.Client{
+		Timeout: time.Second * 2,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, buildUrl(github), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", "bindo")
+
+	res, getErr := client.Do(req)
+	if getErr != nil {
+		return nil, getErr
+	}
+
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		return nil, readErr
+	}
+
+	return parseReleases(body)
+}
+
+func parseReleases(jsonData []byte) ([]release, error) {
+	var releases []release
+
+	err := json.Unmarshal(jsonData, &releases)
+	if err != nil {
+		return nil, err
+	}
+
+	return releases, nil
 }
