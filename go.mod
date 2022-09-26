@@ -1,3 +1,3 @@
 module github.com/syphr42/bindo
 
-go 1.17
+go 1.19
