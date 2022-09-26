@@ -43,7 +43,5 @@
 	},
 
 	// Rootless container
-	"workspaceMount": "source=${localWorkspaceFolder},target=/go/src/github.com/syphr42/bindo,type=bind,Z",
-	"workspaceFolder": "/go/src/github.com/syphr42/bindo",
 	"containerUser": "vscode"
 }
