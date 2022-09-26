@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/syphr42/bindo/pkg/cmd"
-	"github.com/syphr42/bindo/pkg/cmd/github"
-	"github.com/syphr42/bindo/pkg/cmd/help"
+	"github.com/syphr42/bindo/internal/cmd"
+	"github.com/syphr42/bindo/internal/cmd/github"
+	"github.com/syphr42/bindo/internal/cmd/help"
 )
 
 var helpCommand = help.NewHelpCommand()

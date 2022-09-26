@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/syphr42/bindo/pkg/cmd"
+	"github.com/syphr42/bindo/internal/cmd"
 )
 
 type GitHubCommand struct {

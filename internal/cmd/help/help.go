@@ -19,7 +19,7 @@ package help
 import (
 	"flag"
 
-	"github.com/syphr42/bindo/pkg/cmd"
+	"github.com/syphr42/bindo/internal/cmd"
 )
 
 type HelpCommand struct {
