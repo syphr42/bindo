@@ -17,12 +17,11 @@ limitations under the License.
 package github
 
 import (
-	"encoding/json"
+	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"time"
+
+	"github.com/google/go-github/v47/github"
 
 	"github.com/syphr42/bindo/internal/cmd"
 )
@@ -34,12 +33,6 @@ type GitHubCommand struct {
 	owner      string
 	name       string
 	preRelease bool
-}
-
-type release struct {
-	Name       string `json:"name"`
-	Tag        string `json:"tag_name"`
-	PreRelease bool   `json:"prerelease"`
 }
 
 func NewGitHubCommand() *GitHubCommand {
@@ -63,15 +56,15 @@ func NewGitHubCommand() *GitHubCommand {
 	return cmd
 }
 
-func (github *GitHubCommand) Run() error {
-	releases, err := getReleases(github)
+func (cmd *GitHubCommand) Run() error {
+	releases, err := getReleases(cmd)
 
 	if err != nil {
 		return err
 	}
 
 	for _, release := range releases {
-		if github.preRelease || !release.PreRelease {
+		if cmd.preRelease || !is(release.Prerelease) {
 			handleRelease(release)
 			break
 		}
@@ -80,50 +73,26 @@ func (github *GitHubCommand) Run() error {
 	return nil
 }
 
-func handleRelease(release release) {
-	fmt.Println("name =", release.Name, "tag =", release.Tag, "pre-release =", release.PreRelease)
-}
+func getReleases(cmd *GitHubCommand) ([]*github.RepositoryRelease, error) {
+	client := github.NewClient(nil)
 
-func buildUrl(github *GitHubCommand) string {
-	return "https://api." + github.host + "/repos/" + github.owner + "/" + github.name + "/releases"
-}
-
-func getReleases(github *GitHubCommand) ([]release, error) {
-	client := http.Client{
-		Timeout: time.Second * 2,
-	}
-
-	req, err := http.NewRequest(http.MethodGet, buildUrl(github), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("User-Agent", "bindo")
-
-	res, getErr := client.Do(req)
-	if getErr != nil {
-		return nil, getErr
-	}
-
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
-
-	body, readErr := ioutil.ReadAll(res.Body)
-	if readErr != nil {
-		return nil, readErr
-	}
-
-	return parseReleases(body)
-}
-
-func parseReleases(jsonData []byte) ([]release, error) {
-	var releases []release
-
-	err := json.Unmarshal(jsonData, &releases)
+	ctx := context.Background()
+	releases, _, err := client.Repositories.ListReleases(ctx, cmd.owner, cmd.name, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return releases, nil
+}
+
+func handleRelease(release *github.RepositoryRelease) {
+	fmt.Println("name =", *release.Name, "tag =", *release.TagName, "pre-release =", *release.Prerelease)
+}
+
+func is(value *bool) bool {
+	if value == nil {
+		return false
+	}
+
+	return *value
 }
