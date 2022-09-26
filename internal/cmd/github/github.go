@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"regexp"
 
 	"github.com/google/go-github/v47/github"
 
@@ -29,10 +30,11 @@ import (
 type GitHubCommand struct {
 	cmd.AbstractCommand
 
-	host       string
-	owner      string
-	name       string
-	preRelease bool
+	host         string
+	owner        string
+	name         string
+	preRelease   bool
+	assetPattern string
 }
 
 func NewGitHubCommand() *GitHubCommand {
@@ -52,6 +54,7 @@ func NewGitHubCommand() *GitHubCommand {
 	cmd.Flags.StringVar(&cmd.owner, "owner", "", "owner of the repository")
 	cmd.Flags.StringVar(&cmd.name, "name", "", "name of the repository")
 	cmd.Flags.BoolVar(&cmd.preRelease, "prerelease", false, "include pre-releases")
+	cmd.Flags.StringVar(&cmd.assetPattern, "pattern", ".*", "pattern to use for identifing an asset to download")
 
 	return cmd
 }
@@ -65,7 +68,7 @@ func (cmd *GitHubCommand) Run() error {
 
 	for _, release := range releases {
 		if cmd.preRelease || !is(release.Prerelease) {
-			handleRelease(release)
+			handleRelease(cmd, release)
 			break
 		}
 	}
@@ -85,8 +88,27 @@ func getReleases(cmd *GitHubCommand) ([]*github.RepositoryRelease, error) {
 	return releases, nil
 }
 
-func handleRelease(release *github.RepositoryRelease) {
-	fmt.Println("name =", *release.Name, "tag =", *release.TagName, "pre-release =", *release.Prerelease)
+func handleRelease(cmd *GitHubCommand, release *github.RepositoryRelease) {
+	fmt.Println("Release found: ", *release.Name)
+
+	asset := findAsset(cmd, release)
+	if asset == nil {
+		fmt.Println("No matching asset found.")
+	} else {
+		fmt.Println("Asset found: ", *asset.Name)
+	}
+}
+
+func findAsset(cmd *GitHubCommand, release *github.RepositoryRelease) *github.ReleaseAsset {
+	r, _ := regexp.Compile(cmd.assetPattern)
+
+	for _, asset := range release.Assets {
+		if asset.Name != nil && r.MatchString(*asset.Name) {
+			return asset
+		}
+	}
+
+	return nil
 }
 
 func is(value *bool) bool {
